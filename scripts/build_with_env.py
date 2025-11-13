@@ -11,7 +11,7 @@ import os
 import sys
 import subprocess
 def build(target: str = 'run'):
-    cmd = ['pio', 'run', '-e', 'esp32dev']
+    cmd = ['pio', 'run', '-e', 'esp32s3']
     if target == 'upload':
         cmd.extend(['-t', 'upload'])
     print("Ejecutando:", ' '.join(cmd))
