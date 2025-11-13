@@ -49,7 +49,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: firmware
-        path: .pio/build/esp32dev/firmware.bin
+        path: .pio/build/esp32s3/firmware.bin   # 👈 corregido aquí
     
     - name: Upload to S3 (if secrets available)
       continue-on-error: true
@@ -77,6 +77,6 @@ jobs:
         FIRMWARE_NAME="firmware-$(date +%Y%m%d-%H%M%S).bin"
             
         # Upload to S3 using environment variables instead of direct secret expansion
-        aws s3 cp .pio/build/esp32dev/firmware.bin "s3://${S3_BUCKET_NAME}/${FIRMWARE_NAME}" --content-type application/octet-stream
+        aws s3 cp .pio/build/esp32s3/firmware.bin "s3://${S3_BUCKET_NAME}/${FIRMWARE_NAME}" --content-type application/octet-stream  # 👈 corregido aquí
         
         echo "✅ Firmware uploaded to S3: s3://${S3_BUCKET_NAME}/${FIRMWARE_NAME}"
