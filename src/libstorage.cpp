@@ -2,6 +2,7 @@
 #include <Preferences.h>
 #include <libstorage.h>
 
+String versionFirmware = "";
 static const char* kNamespace = "cred";
 static const char* kWiFiSsidKey = "wifi_ssid";
 static const char* kWiFiPwdKey  = "wifi_pwd";
