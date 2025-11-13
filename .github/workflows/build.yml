@@ -3,8 +3,8 @@ name: Build and OTA Publish
 on:
   push:
     branches: [ main ]
-  tags:
-    - 'v*.*.*'
+    tags:
+      - 'v*.*.*'
 
 jobs:
   build:
@@ -34,6 +34,7 @@ jobs:
           fi
           echo "FIRMWARE_VERSION=$VERSION" >> $GITHUB_ENV
           echo "firmware-name=firmware_${VERSION}.bin" >> $GITHUB_OUTPUT
+          echo "📦 Firmware version set to $VERSION"
 
       - name: Build firmware
         run: platformio run -e esp32s3
