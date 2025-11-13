@@ -52,15 +52,16 @@ bool saveVersionFirmware(const String version) {
   if (!prefs.begin(kNamespace, false)) return false;
   bool ok = prefs.putString("fw_version", version) > 0;
   prefs.end();
+  versionFirmware = version;
   return ok;
 }
 
-void loadVersionFirmware(String& version) {
+void loadVersionFirmware() {
   Preferences prefs;
 
   if (!prefs.begin(kNamespace, true)) return;
   String v = prefs.getString("fw_version", "v1.0.0");
   prefs.end();
   if (v.length() == 0) return;
-  version = v;
+  versionFirmware = v;
 }

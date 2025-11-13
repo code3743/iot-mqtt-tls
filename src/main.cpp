@@ -32,7 +32,6 @@
 
 SensorData data;  // Estructura para almacenar los datos de temperatura y humedad del SHT21
 time_t hora;      // Timestamp de la hora actual
-String versionFirmware = "v1.0.0"; 
 
 /**
  * Configura el dispositivo para conectarse a la red WiFi y ajusta parametros IoT
@@ -70,7 +69,7 @@ void setup() {
   startWiFi("");            // Paso 5. Inicializa el servicio de WiFi
   setupIoT();               // Paso 6. Inicializa el servicio de IoT
   hora = setTime();         // Paso 7. Ajusta el tiempo del dispositivo con servidores SNTP
-  loadVersionFirmware(versionFirmware);
+  loadVersionFirmware();
 }
 
 // Función loop
