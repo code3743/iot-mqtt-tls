@@ -75,12 +75,7 @@ jobs:
         
         # Generate firmware name with timestamp
         FIRMWARE_NAME="firmware-$(date +%Y%m%d-%H%M%S).bin"
-        
-        # Install AWS CLI
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
-        
+            
         # Upload to S3 using environment variables instead of direct secret expansion
         aws s3 cp .pio/build/esp32dev/firmware.bin "s3://${S3_BUCKET_NAME}/${FIRMWARE_NAME}" --content-type application/octet-stream
         
