@@ -43,7 +43,7 @@ jobs:
         # Certificado raíz
         ROOT_CA: ${{ secrets.ROOT_CA }}
       run: |
-        platformio run -e esp32dev
+        platformio run -e esp32s3
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
