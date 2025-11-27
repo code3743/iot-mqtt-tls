@@ -32,7 +32,7 @@ jobs:
             exit 0
           fi
           echo "FIRMWARE_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "FIRMWARE_NAME=firmware_${VERSION}.bin" >> $GITHUB_OUTPUT
+          echo "firmware-name=firmware_${VERSION}.bin" >> $GITHUB_OUTPUT
           echo "📦 Firmware version set to $VERSION"
 
       - name: Build firmware
@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload firmware to S3
         run: |
-          aws s3 cp .pio/build/esp32dev/firmware.bin s3://${{ secrets.S3_BUCKET_NAME }}/$FIRMWARE_NAME \
+          aws s3 cp .pio/build/esp32dev/firmware.bin s3://${{ secrets.S3_BUCKET_NAME }}/${{ steps.buildinfo.outputs.firmware-name }}\
             --content-type application/octet-stream
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
