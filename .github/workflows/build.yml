@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload firmware to S3
         run: |
-          aws s3 cp .pio/build/esp32s3/firmware.bin s3://${{ secrets.S3_BUCKET_NAME }}/${{ steps.buildinfo.outputs.firmware-name }} \
+          aws s3 cp .pio/build/esp32dev/firmware.bin s3://${{ secrets.S3_BUCKET_NAME }}/$FIRMWARE_NAME \
             --content-type application/octet-stream
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
