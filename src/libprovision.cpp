@@ -29,6 +29,25 @@ void startProvisioningAP() {
   IPAddress ip = WiFi.softAPIP();
   Serial.print("Provisioning AP "); Serial.print(apName); Serial.print(" IP "); Serial.println(ip);
   server.on("/", HTTP_GET, handleRoot);
+  server.on("/generate_204", []() {  // Android
+    server.sendHeader("Location", "/");
+    server.send(302, "text/plain", "");
+  });
+
+  server.on("/hotspot-detect.html", []() { // iOS/macOS
+    server.sendHeader("Location", "/");
+    server.send(302, "text/plain", "");
+  });
+
+  server.on("/fwlink", []() { // Windows
+    server.sendHeader("Location", "/");
+    server.send(302, "text/plain", "");
+  });
+
+  server.on("/ncsi.txt", []() { // Linux
+    server.sendHeader("Location", "/");
+    server.send(302, "text/plain", "");
+  });
   server.on("/save", HTTP_POST, handleSave);
   server.begin();
   s_isProvisioning = true;

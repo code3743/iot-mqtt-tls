@@ -106,6 +106,9 @@ void startWiFi(const char* hostname) {
   } else {
     Serial.println("\nWiFi connection failed");
     clearStoredWiFi();
+    Serial.println("Cleared stored WiFi credentials. Restarting...");
+    delay(1000);
+    ESP.restart();
   }
 }
 
