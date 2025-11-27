@@ -38,11 +38,27 @@ def load_env_defines():
 
         if "ROOT_CA" == key:
             raw = env_vars["ROOT_CA"].replace("\\n", "\n")
+            '''
+            guarfar
+            const char ROOT_CA[] = 
+            "-----BEGIN CERTIFICATE-----\n"
+            "MIIEVjCCAj6gAwIBAgIQY5WTY8JOcIJxWRi/w9ftVjANBgkqhkiG9w0BAQsFADBP\n"
+            "MQswCQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJuZXQgU2VjdXJpdHkgUmVzZWFy\n"
+            '''
             os.makedirs("src", exist_ok=True)
             with open("src/root_ca.h", "w") as f:
-                f.write('const char ROOT_CA[] = R"EOF(\n')
-                f.write(raw)
-                f.write('\n)EOF";\n')
+                f.write('const char ROOT_CA[] = \n')
+                for line in raw.splitlines():
+                    if line.strip() == "":
+                        continue
+                    if line.startswith('"'):
+                        line = line.replace('"', '')
+                    
+                    if line.endswith('"'):
+                        line = line.replace('"', '')
+                    
+                    f.write(f'"{line}\\n"\n')
+                f.write(';\n')
             print("✔ Archivo generado: src/root_ca.h")
             continue
         os.environ[key] = value
