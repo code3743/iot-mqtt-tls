@@ -50,6 +50,8 @@ def load_env_defines():
             
     if len(sys.argv) > 1 and sys.argv[1] == 'upload':
         subprocess.run(['pio', 'run', '-t', 'upload'], check=True)
+    else:
+        subprocess.run(['pio', 'run'], check=True)
 
 
 if __name__ == "__main__":

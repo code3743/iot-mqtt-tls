@@ -19,3 +19,4 @@
 .DS_Store
 Thumbs.db
 /src/root_ca.h
+/scripts/__pycache__/
