@@ -49,7 +49,7 @@ jobs:
           echo "WIFI_PASSWORD=\"${{ secrets.WIFI_PASSWORD }}\"" >> .env
           echo "ROOT_CA=\"${{ secrets.ROOT_CA }}\"" >> .env
           set -a && source .env && set +a
-          platformio run -e esp32s3
+          platformio run
 
       - name: Upload firmware to S3
         run: |
