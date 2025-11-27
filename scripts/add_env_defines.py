@@ -1,61 +1,56 @@
-Import("env")
-
-from pathlib import Path
 import os
-
-# Variables que aceptamos
-KNOWN = [
-    'COUNTRY','STATE','CITY',
-    'MQTT_SERVER','MQTT_PORT','MQTT_USER','MQTT_PASSWORD',
-    'WIFI_SSID','WIFI_PASSWORD','ROOT_CA'
-]
+import sys
+import subprocess
 
 
-def load_dotenv(dotenv_path: Path):
-    vals = {}
-    if not dotenv_path.exists():
-        return vals
-    for line in dotenv_path.read_text(encoding="utf-8").splitlines():
-        s = line.strip()
-        if not s or s.startswith('#'):
+def parse_env_file(path=".env"):
+    env_vars = {}
+    if not os.path.exists(path):
+        print("⚠️ No se encontró .env")
+        return env_vars
+
+    with open(path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            env_vars[key.strip()] = value
+
+    return env_vars
+
+
+def load_env_defines():
+    env_vars = parse_env_file()
+
+    if not env_vars:
+        return
+    
+    if env_vars.get("ROOT_CA") is None:
+        print("⚠️ ROOT_CA no definido en .env")
+        return
+    
+
+    for key, value in env_vars.items():
+
+        if "ROOT_CA" == key:
+            raw = env_vars["ROOT_CA"].replace("\\n", "\n")
+            os.makedirs("src", exist_ok=True)
+            with open("src/root_ca.h", "w") as f:
+                f.write('const char ROOT_CA[] = R"EOF(\n')
+                f.write(raw)
+                f.write('\n)EOF";\n')
+            print("✔ Archivo generado: src/root_ca.h")
             continue
-        if '=' not in s:
-            continue
-        k, v = s.split('=', 1)
-        k = k.strip()
-        v = v.strip()
-        if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
-            v = v[1:-1]
-        vals[k] = v
-    return vals
+        os.environ[key] = value
+        print(f"✔ Definido: {key}={value}")
+            
+    if len(sys.argv) > 1 and sys.argv[1] == 'upload':
+        subprocess.run(['pio', 'run', '-t', 'upload'], check=True)
 
 
-root = Path(env['PROJECT_DIR'])
-file_vars = load_dotenv(root / '.env')
-os_vars = {k: os.environ[k] for k in KNOWN if k in os.environ}
-
-# Merge: entorno del sistema sobreescribe al .env
-vals = dict(file_vars)
-vals.update(os_vars)
-
-# Construir CPPDEFINES seguros
-cpp_defines = []
-for k in KNOWN:
-    if k not in vals or vals[k] == '':
-        continue
-    v = vals[k]
-    if k == 'MQTT_PORT':
-        try:
-            cpp_defines.append((k, int(v)))
-        except ValueError:
-            # Si no es entero, pásalo como string
-            cpp_defines.append((k, v))
-    else:
-        # Pasar como string literal C (PlatformIO se encarga del quoting)
-        cpp_defines.append((k, v))
-
-if cpp_defines:
-    env.Append(CPPDEFINES=cpp_defines)
-    print("[add_env_defines] Defines aplicados:", [d[0] if isinstance(d, tuple) else d for d in cpp_defines])
-else:
-    print("[add_env_defines] Sin defines desde .env/entorno; se usarán defaults del código.")
+if __name__ == "__main__":
+    load_env_defines()

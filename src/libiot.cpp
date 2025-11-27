@@ -22,19 +22,17 @@
  * THE SOFTWARE.
  */
 
-#include <Arduino.h>
-#include <WiFi.h>              // Necesario para WiFi.macAddress()
-#include <Wire.h>              // Necesario para I2C
-#include <WiFiClientSecure.h>
-#include <PubSubClient.h>
-#include "libiot.h"            // <-- MUY IMPORTANTE, asegúrate que esté así
-#include "libota.h"            // Si usa funciones OTA
-#include "libwifi.h"
-
+#include <libiot.h>
 #include "DHT.h"
-#define DHTPIN 10       // Cambia este pin si usas otro
-#define DHTTYPE DHT22
-DHT dht(DHTPIN, DHTTYPE);
+
+#include <libota.h>
+#include <libstorage.h>
+#include <Wire.h>
+
+// Versión del firmware (debe coincidir con main.cpp)
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "v1.1.1"
+#endif
 
 //#define PRINT
 #ifdef PRINT
@@ -47,6 +45,9 @@ DHT dht(DHTPIN, DHTTYPE);
 #define PRINT(x)
 #endif
 
+#define DHTPIN 10       
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
 String alert = ""; //Mensaje de alerta
 extern const char * client_id;  //ID del cliente MQTT
 
@@ -72,6 +73,10 @@ time_t setTime() {
   return now;
 }
 
+// Variable para debugging periódico
+static unsigned long lastMQTTDebug = 0;
+static const unsigned long MQTT_DEBUG_INTERVAL = 30000; // 30 segundos
+
 /**
  * Conecta el dispositivo con el bróker MQTT usando
  * las credenciales establecidas.
@@ -81,7 +86,22 @@ void checkMQTT() {
   if (!client.connected()) {
     reconnect();
   }
-  client.loop();
+  // Procesa mensajes MQTT entrantes (esto es crítico para recibir mensajes)
+  // IMPORTANTE: client.loop() debe llamarse frecuentemente para recibir mensajes
+  bool loopResult = client.loop();
+  if (!loopResult && client.connected()) {
+    // Si loop() retorna false pero estamos conectados, podría haber un problema
+    Serial.println("⚠ client.loop() retornó false (podría indicar problema de conexión)");
+  }
+  
+  // Debug periódico cada 30 segundos
+  unsigned long now = millis();
+  if (now - lastMQTTDebug > MQTT_DEBUG_INTERVAL) {
+    lastMQTTDebug = now;
+    Serial.println("=== Healthcheck MQTT (cada 30s) ===");
+    Serial.print("Conectado: ");
+    Serial.println(client.connected() ? "✅UP" : "❌DOWN");
+  }
 }
 
 /**
@@ -102,13 +122,51 @@ String getMacAddress() {
  */
 void reconnect() {
   while (!client.connected()) { //Mientras no esté conectado al servidor MQTT
-    Serial.print("Conectando al servidor MQTT...");
+    Serial.println("=== Intentando conectar a MQTT ===");
+    Serial.print("Servidor: ");
+    Serial.println(mqtt_server);
+    Serial.print("Puerto: ");
+    Serial.println(mqtt_port);
+    Serial.print("Usuario: ");
+    Serial.println(mqtt_user);
+    Serial.print("Client ID: ");
+    Serial.println(client_id);
+    Serial.print("Conectando...");
     if (client.connect(client_id, mqtt_user, mqtt_password)) { //Intenta conectarse al servidor MQTT
-      Serial.println("Conectado");
-      client.subscribe(MQTT_TOPIC_SUB); //Se suscribe al tópico de suscripción
+      Serial.println(" ✓ CONECTADO");
+      
+      // CRÍTICO: Reconfigurar el callback después de reconectar
+      client.setCallback(receivedCallback);
+      Serial.println("✓ Callback reconfigurado después de reconexión");
+      
+      // Imprimir versión del firmware al conectar (usar versión guardada)
+      String firmwareVersion = getFirmwareVersion();
+      Serial.print("Firmware: ");
+      Serial.println(firmwareVersion);
+      
+      Serial.println("=== Suscripciones MQTT ===");
+      // Se suscribe al tópico de suscripción con QoS 1
+      bool subResult = client.subscribe(MQTT_TOPIC_SUB, 1);
+      if (subResult) {
+        Serial.println("✓ Suscrito exitosamente a " + String(MQTT_TOPIC_SUB));
+      } else {
+        Serial.println("✗ Error al suscribirse a " + String(MQTT_TOPIC_SUB));
+      }
+      
+      // Procesar mensajes para confirmar suscripciones
+      client.loop();
+      delay(100); // Dar tiempo para procesar
+      
       setupOTA(client); //Configura la funcionalidad OTA
-      Serial.println("Suscripción a " + String(MQTT_TOPIC_SUB));
+      
+      // Procesar mensajes nuevamente después de suscribirse a OTA
+      client.loop();
+      delay(100);
+      
+      Serial.println("==========================");
+      Serial.println("Listo para recibir mensajes MQTT");
     } else {
+      Serial.println(" ✗ FALLÓ");
       Serial.println("Problema con la conexión, revise los valores de las constantes MQTT");
       int state = client.state();
       Serial.print("Código de error = ");
@@ -125,20 +183,37 @@ void reconnect() {
  * Función setupIoT que configura el certificado raíz, el servidor MQTT y el puerto
  */
 void setupIoT() {
-  Wire.begin();                 //Inicializa el bus I2C
+  Wire.begin();                 //Inicializa el bus I2C: (SDA, SCL)
   espClient.setCACert(root_ca); //Configura el certificado raíz de la autoridad de certificación
   client.setServer(mqtt_server, mqtt_port);   //Configura el servidor MQTT y el puerto seguro
+  
+  // Configurar buffer más grande para mensajes grandes (por defecto es 256 bytes)
+  client.setBufferSize(1024);
+  
   client.setCallback(receivedCallback);       //Configura la función que se ejecutará cuando lleguen mensajes a la suscripción
+  Serial.println("=== Configuración MQTT ===");
+  Serial.print("Servidor MQTT: ");
+  Serial.println(mqtt_server);
+  Serial.print("Puerto MQTT: ");
+  Serial.println(mqtt_port);
+  Serial.print("Usuario MQTT: ");
+  Serial.println(mqtt_user);
+  Serial.print("Client ID: ");
+  Serial.println(client_id);
+  Serial.print("Buffer size: ");
+  Serial.println(client.getBufferSize());
+  Serial.println("Callback MQTT configurado: receivedCallback");
+  Serial.println("==========================");
   setTime();                    //Ajusta el tiempo del dispositivo con servidores SNTP
-  setupSHT();                   //Configura el sensor SHT21
+  setupDHT();                   //Configura el sensor SHT21
 }
 
 
 /**
  * Configura el sensor SHT21
  */
-void setupSHT() {
-  dht.begin();  
+void setupDHT() {
+  dht.begin();
   Serial.println("DHT22 inicializado correctamente");
 }
 
@@ -209,19 +284,90 @@ void sendSensorData(float temperatura, float humedad) {
  * También verifica si el mensaje es para actualización OTA.
  */
 void receivedCallback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Recibido [");
+  Serial.println("\n*** CALLBACK MQTT DISPARADO ***");
+  Serial.print("Topic recibido: [");
   Serial.print(topic);
-  Serial.print("]: ");
-  String data = ""; // Se inicializa con un string vacío
-  for (int i = 0; i < length; i++) data += String((char)payload[i]); // Se recorre el payload y se va concatenando al string data
+  Serial.print("] (longitud payload: ");
+  Serial.print(length);
+  Serial.println(")");
+  
+  // Crear buffer para el payload (agregar null terminator)
+  // Usar String para evitar problemas con VLA
+  String data = "";
+  for (unsigned int i = 0; i < length; i++) {
+    data += (char)payload[i];
+  }
+  
+  Serial.print("Payload: ");
   Serial.println(data);
   
+  // Compara el topic recibido con el topic OTA
+  String topicStr = String(topic);
+  String otaTopicStr = String(OTA_TOPIC);
+  
+  Serial.println("--- Comparación de topics ---");
+  Serial.print("Topic recibido: '");
+  Serial.print(topicStr);
+  Serial.print("' (longitud: ");
+  Serial.print(topicStr.length());
+  Serial.println(")");
+  Serial.print("OTA_TOPIC esperado: '");
+  Serial.print(otaTopicStr);
+  Serial.print("' (longitud: ");
+  Serial.print(otaTopicStr.length());
+  Serial.println(")");
+  Serial.print("¿Coinciden? ");
+  Serial.println(topicStr == otaTopicStr ? "SÍ" : "NO");
+  
   // Verifica si el mensaje es para actualización OTA
-  if (String(topic) == OTA_TOPIC) {
+  if (topicStr == otaTopicStr) {
+    Serial.println("✓✓✓ Mensaje OTA detectado, procesando...");
     checkOTAUpdate(data.c_str());
     return;
   }
   
   // Verifica si el mensaje contiene una alerta
-  if (data.indexOf("ALERT") >= 0) alert = data; // Si el mensaje contiene la palabra ALERT, se asigna a la variable alert
+  if (data.indexOf("ALERT") >= 0) {
+    Serial.println("✓ Mensaje ALERT detectado");
+    alert = data; // Si el mensaje contiene la palabra ALERT, se asigna a la variable alert
+  } else {
+    Serial.println("⚠ Mensaje recibido pero no es OTA ni ALERT");
+  }
+  Serial.println("*** FIN CALLBACK ***\n");
+}
+
+/**
+ * Función de prueba: Publica un mensaje de prueba y verifica recepción
+ * Útil para diagnosticar problemas de MQTT
+ */
+void testMQTTCallback() {
+  if (!client.connected()) {
+    Serial.println("⚠ No se puede probar: cliente MQTT no conectado");
+    return;
+  }
+  
+  Serial.println("=== TEST MQTT CALLBACK ===");
+  Serial.println("Este test verifica que el callback funciona correctamente");
+  Serial.println("Publicando mensaje de prueba...");
+  
+  // Publicar un mensaje de prueba al topic de entrada (para que el dispositivo lo reciba)
+  String testTopic = String(MQTT_TOPIC_SUB);
+  String testMessage = "TEST_MESSAGE_FROM_SELF";
+  
+  bool pubResult = client.publish(testTopic.c_str(), testMessage.c_str());
+  if (pubResult) {
+    Serial.println("✓ Mensaje de prueba publicado");
+    Serial.println("Esperando recibirlo en el callback...");
+    Serial.println("(Si el callback funciona, deberías ver '*** CALLBACK MQTT DISPARADO ***' arriba)");
+  } else {
+    Serial.println("✗ Error al publicar mensaje de prueba");
+  }
+  
+  // Procesar mensajes varias veces para asegurar recepción
+  for (int i = 0; i < 10; i++) {
+    client.loop();
+    delay(100);
+  }
+  
+  Serial.println("=== FIN TEST ===");
 }

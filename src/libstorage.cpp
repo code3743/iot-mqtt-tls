@@ -2,7 +2,6 @@
 #include <Preferences.h>
 #include <libstorage.h>
 
-String versionFirmware = "";
 static const char* kNamespace = "cred";
 static const char* kWiFiSsidKey = "wifi_ssid";
 static const char* kWiFiPwdKey  = "wifi_pwd";
@@ -46,23 +45,42 @@ bool hasWiFiCredentials() {
   return s.length() > 0;
 }
 
+// Funciones para guardar/cargar la versi?n del firmware
+static const char* kFirmwareVersionKey = "fw_version";
 
-bool saveVersionFirmware(const String version) {
+bool saveFirmwareVersion(const String &version) {
   if (version.length() == 0) return false;
   Preferences prefs;
   if (!prefs.begin(kNamespace, false)) return false;
-  bool ok = prefs.putString("fw_version", version) > 0;
+  bool ok = prefs.putString(kFirmwareVersionKey, version) > 0;
   prefs.end();
-  versionFirmware = version;
   return ok;
 }
 
-void loadVersionFirmware() {
+bool loadFirmwareVersion(String &outVersion) {
   Preferences prefs;
-
-  if (!prefs.begin(kNamespace, true)) return;
-  String v = prefs.getString("fw_version", "v1.0.0");
+  if (!prefs.begin(kNamespace, true)) return false;
+  String v = prefs.getString(kFirmwareVersionKey, "");
   prefs.end();
-  if (v.length() == 0) return;
-  versionFirmware = v;
+  if (v.length() == 0) return false;
+  outVersion = v;
+  return true;
+}
+
+String getFirmwareVersion() {
+  String version;
+  if (loadFirmwareVersion(version)) {
+    return version;
+  }
+  // Si no hay versi?n guardada, retornar la constante por defecto
+  // y guardarla para futuras referencias
+  #ifndef FIRMWARE_VERSION
+    String defaultVersion = "v1.1.1";
+    saveFirmwareVersion(defaultVersion); // Guardar versi?n inicial
+    return defaultVersion;
+  #else
+    String defaultVersion = String(FIRMWARE_VERSION);
+    saveFirmwareVersion(defaultVersion); // Guardar versi?n inicial
+    return defaultVersion;
+  #endif
 }

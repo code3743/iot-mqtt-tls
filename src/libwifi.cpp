@@ -93,7 +93,7 @@ void startWiFi(const char* hostname) {
   
   // Wait for connection
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 100) {
     delay(500);
     Serial.print(".");
     attempts++;
@@ -105,6 +105,7 @@ void startWiFi(const char* hostname) {
     Serial.println(WiFi.localIP());
   } else {
     Serial.println("\nWiFi connection failed");
+    clearStoredWiFi();
   }
 }
 

@@ -23,6 +23,7 @@
  */
 
 #include <libdisplay.h>
+#include "libstorage.h"
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1); // Pantalla OLED vinculada al dispositivo
 
@@ -52,7 +53,7 @@ void displayNoSignal() {
 /**
  * Agrega a la pantalla el header con mensaje "IOT Sensors" y en seguida la hora actual
  */
-void displayHeader(time_t now, String versionFirmware) {  // Se recibe el tiempo actual como parámetro
+void displayHeader(time_t now) {  // Se recibe el tiempo actual como parámetro
   display.setTextSize(1);         // Tamaño de texto 1
   long int milli = now + millis() / 1000; // Se obtiene el tiempo en milisegundos 
   struct tm* tinfo;               // Estructura para almacenar la información de la hora
@@ -60,7 +61,7 @@ void displayHeader(time_t now, String versionFirmware) {  // Se recibe el tiempo
   String hour = String(asctime(tinfo)).substring(11, 19); // Se obtiene la hora en formato hh:mm:ss
   String title = "IOT Sensors  " + hour;  // Se crea el título con la hora
   display.println(title);         // Se imprime el título en la pantalla
-  display.println("Firmware: " + versionFirmware); 
+  display.println("fw: " + getFirmwareVersion()); // Se imprime la versión del firmware
 }
 
 /**
@@ -70,7 +71,7 @@ void displayMeasures(float temp, float humi) {
   display.println("");
   display.print("T: ");
   display.print(temp);  // Se imprime la temperatura
-  display.print("   ");
+  display.print("    ");
   display.print("H: ");
   display.print(humi);  // Se imprime la humedad
   display.println("");
@@ -109,12 +110,11 @@ void displayConnecting(String ssid) {
  * Muestra en la pantalla el mensaje recibido.
  * Se recibe el mensaje, la hora actual, la temperatura y la humedad.
  */
-void displayLoop(String message, time_t now, float temp, float humi, String versionFirmware) {
+void displayLoop(String message, time_t now, float temp, float humi) {
   display.clearDisplay();
   display.setCursor(0,0); 
-  displayHeader(now, versionFirmware);
+  displayHeader(now);
   displayMeasures(temp, humi);
   displayMessage(message);
   display.display();
 }
-

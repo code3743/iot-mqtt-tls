@@ -60,7 +60,7 @@ time_t setTime();                   ///< Función setTime que ajusta el tiempo d
 bool measure(SensorData * data);    ///< Función measure que verifica si ya es momento de hacer las mediciones de las variables
 void reconnect();                   ///< Función que se ejecuta cuando se establece conexión con el servidor MQTT
 void setupIoT();                    ///< Función setupIoT que configura el certificado raíz, el servidor MQTT y el puerto
-void setupSHT();                    ///< Función setupSHT que configura el sensor SHT21
+void setupDHT();                    ///< Función setupSHT que configura el sensor SHT21
 void checkMQTT();                   ///< Función checkMQTT que verifica si el dispositivo está conectado al broker MQTT y si no lo está, intenta reconectar
 String checkAlert();                ///< Función checkAlert que verifica si ha llegado alguna alerta al dispositivo
 void receivedCallback(char* topic, byte* payload, unsigned int length); ///< Función receivedCallback que se ejecuta cuando llega un mensaje a la suscripción MQTT

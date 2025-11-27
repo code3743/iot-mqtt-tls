@@ -30,6 +30,9 @@
 #include <libstorage.h>
 #include <libprovision.h>
 
+// Versi?n del firmware
+#define FIRMWARE_VERSION "v1.1.1"
+
 SensorData data;  // Estructura para almacenar los datos de temperatura y humedad del SHT21
 time_t hora;      // Timestamp de la hora actual
 
@@ -38,6 +41,19 @@ time_t hora;      // Timestamp de la hora actual
  */
 void setup() {
   Serial.begin(115200);     // Paso 1. Inicializa el puerto serie
+  delay(1000);              // Espera a que el puerto serie se estabilice
+  
+  // Imprimir informaci?n del firmware al inicio
+  // Usar la versi?n guardada en memoria no vol?til (si existe) o la constante por defecto
+  String firmwareVersion = getFirmwareVersion();
+  Serial.println("\n");
+  Serial.println("========================================");
+  Serial.println("  IoT MQTT TLS Device");
+  Serial.print("  Firmware Version: ");
+  Serial.println(firmwareVersion);
+  Serial.println("========================================");
+  Serial.println();
+  
   // Factory reset si el botón BOOT (GPIO0) está presionado al arrancar
   pinMode(0, INPUT_PULLUP);
   if (digitalRead(0) == LOW) {
@@ -69,21 +85,27 @@ void setup() {
   startWiFi("");            // Paso 5. Inicializa el servicio de WiFi
   setupIoT();               // Paso 6. Inicializa el servicio de IoT
   hora = setTime();         // Paso 7. Ajusta el tiempo del dispositivo con servidores SNTP
-  loadVersionFirmware();
+  
+  // Mostrar version al finalizar inicializacion (reutilizar variable ya declarada arriba)
+  Serial.println();
+  Serial.println("========================================");
+  Serial.print("Sistema inicializado - Firmware>> ");
+  Serial.println(firmwareVersion);
+  Serial.println("========================================");
+  Serial.println();
 }
 
 // Función loop
 void loop() {
   if (isProvisioning()) {   // Si estamos en modo configuración, atender portal
-   provisioningLoop();
-  return;
- }
- checkWiFi();                                                   // Paso 1. Verifica la conexión a la red WiFi y si no está conectado, intenta reconectar
- checkMQTT();                                                   // Paso 2. Verifica la conexión al servidor MQTT y si no está conectado, intenta reconectar
-                                             // Paso 2. Verifica la conexión al servidor MQTT y si no está conectado, intenta reconectar
+    provisioningLoop();
+    return;
+  }
+  checkWiFi();                                                   // Paso 1. Verifica la conexión a la red WiFi y si no está conectado, intenta reconectar
+  checkMQTT();                                                   // Paso 2. Verifica la conexión al servidor MQTT y si no está conectado, intenta reconectar
   String message = checkAlert();                                 // Paso 3. Verifica si hay alertas y las retorna en caso de haberlas
   if(measure(&data)){                                            // Paso 4. Realiza una medición de temperatura y humedad
-    displayLoop("ok", hora, data.temperature, data.humidity, versionFirmware); // Paso 5. Muestra en la pantalla el mensaje recibido, las medidas de temperatura y humedad
+    displayLoop(message, hora, data.temperature, data.humidity); // Paso 5. Muestra en la pantalla el mensaje recibido, las medidas de temperatura y humedad
     sendSensorData(data.temperature, data.humidity);             // Paso 6. Envía los datos de temperatura y humedad al servidor MQTT
   }   
 }
