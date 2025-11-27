@@ -32,7 +32,7 @@ jobs:
             exit 0
           fi
           echo "FIRMWARE_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "firmware-name=firmware_${VERSION}.bin" >> $GITHUB_OUTPUT
+          echo "FIRMWARE_NAME=firmware_${VERSION}.bin" >> $GITHUB_OUTPUT
           echo "📦 Firmware version set to $VERSION"
 
       - name: Build firmware
